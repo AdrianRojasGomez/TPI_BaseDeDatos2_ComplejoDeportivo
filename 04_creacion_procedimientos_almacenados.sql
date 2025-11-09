@@ -90,7 +90,3 @@ END;
 GO
 
 --Fin sp_RegistrarSocio
-
-
-
-
