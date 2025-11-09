@@ -1,3 +1,7 @@
+--sp_RegistrarSocio
+--Objetivo: Añadir un nuevo socio al club, asegurando que los datos básicos estén presentes.
+--Lógica: Recibe los datos del socio, los valida (en este caso, solo inserta) y lo registra con la fecha actual.
+
 USE ClubDeportivo_DB;
 GO
 
@@ -84,3 +88,9 @@ BEGIN
     SELECT SCOPE_IDENTITY() AS IDSocioCreado;
 END;
 GO
+
+--Fin sp_RegistrarSocio
+
+
+
+
