@@ -2,10 +2,38 @@
 SELECT * FROM Socio;
 
 EXEC dbo.sp_RegistrarSocio
-    @Nombre    = 'María',
-    @Apellido  = 'Gómez',
+    @Nombre    = 'Marï¿½a',
+    @Apellido  = 'Gï¿½mez',
     @DNI       = '10000002',
     @TipoSocio = 'Premium',
     @Direccion = 'Av. Siempre Viva 742',
     @Email     = 'maria.gomez@example.com';
 GO
+---------------------------------------------------------
+--Prueba exitosa de SP dbo.sp_CrearReserva 
+---------------------------------------------------------
+
+EXEC dbo.sp_CrearReserva
+    @IDSocio = 4,
+    @IDCancha = 1,
+    @IDTipoCancha = 1,
+    @IDQuincho = NULL,
+    @IDPileta = NULL,
+    @FechaInicio = '2025-11-03 18:00:00',
+    @FechaFin = '2025-11-03 19:00:00',
+    @PrecioTotal = 4000.00,
+    @Observ = 'Reserva de cancha FÃºtbol 5 para SofÃ­a';
+
+--Prueba de error conflicto de horariode SP dbo.sp_CrearReserva 
+
+---------------------------------------------------------
+--Intentar reservar la Cancha 1 el 3 de noviembre de 10:30 a 11:30. Esto entra en conflicto con la reserva existente de Lucas (Reserva ID 1) que es de 10:00 a 11:00.
+---------------------------------------------------------   
+
+EXEC dbo.sp_CrearReserva
+    @IDSocio = 2, 
+    @IDCancha = 1,
+    @IDTipoCancha = 1,
+    @FechaInicio = '2025-11-03 10:30:00',
+    @FechaFin = '2025-11-03 11:30:00',
+    @PrecioTotal = 4000.00;
