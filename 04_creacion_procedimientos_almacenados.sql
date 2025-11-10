@@ -1,6 +1,6 @@
 --sp_RegistrarSocio
---Objetivo: Añadir un nuevo socio al club, asegurando que los datos básicos estén presentes.
---Lógica: Recibe los datos del socio, los valida (en este caso, solo inserta) y lo registra con la fecha actual.
+--Objetivo: Aï¿½adir un nuevo socio al club, asegurando que los datos bï¿½sicos estï¿½n presentes.
+--Lï¿½gica: Recibe los datos del socio, los valida (en este caso, solo inserta) y lo registra con la fecha actual.
 
 USE ClubDeportivo_DB;
 GO
@@ -34,7 +34,7 @@ BEGIN
     IF (@Email IS NOT NULL)
         SET @Email = TRIM(@Email);
 
-    -- Validaciones básicas
+    -- Validaciones bï¿½sicas
     IF (@Nombre = '' OR @Nombre IS NULL)
     BEGIN
         RAISERROR('El nombre es obligatorio.', 16, 1);
@@ -65,14 +65,14 @@ BEGIN
         RETURN;
     END;
 
-    -- DNI único
+    -- DNI ï¿½nico
     IF EXISTS (SELECT 1 FROM Socio WHERE DNI = @DNI)
     BEGIN
         RAISERROR('Ya existe un socio registrado con ese DNI.', 16, 1);
         RETURN;
     END;
 
-    -- Email único si viene
+    -- Email ï¿½nico si viene
     IF (@Email IS NOT NULL AND @Email <> '')
        AND EXISTS (SELECT 1 FROM Socio WHERE Email = @Email)
     BEGIN
@@ -90,3 +90,218 @@ END;
 GO
 
 --Fin sp_RegistrarSocio
+
+-----------------------------------------------------------------
+--sp_CrearReserva
+--Objetivo: Crear una nueva reserva, validando que no haya conflictos de horario con el mismo recurso.
+--Logica: Esta revisa si ya existe una reserva activa para el mismo recurso (cancha, quincho o pileta) que se superponga con el horario solicitado. Si esta libre, la inserta.
+-----------------------------------------------------------------
+
+USE ClubDeportivo_DB;
+GO
+
+IF OBJECT_ID('dbo.sp_CrearReserva', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_CrearReserva;
+GO
+
+CREATE PROCEDURE dbo.sp_CrearReserva
+(
+    @IDSocio       INT,
+    @IDCancha      INT = NULL,
+    @IDTipoCancha  INT = NULL,      
+    @IDQuincho     INT = NULL,
+    @IDPileta      INT = NULL,
+    @FechaInicio   DATETIME,
+    @FechaFin      DATETIME,
+    @PrecioTotal   DECIMAL(10,2) = NULL,
+    @Observ        VARCHAR(200) = NULL
+)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF (@Observ IS NOT NULL)
+        SET @Observ = TRIM(@Observ);
+
+    ----------------------------------------------------------------
+    -- Validar socio
+    ----------------------------------------------------------------
+    IF NOT EXISTS (SELECT 1 FROM Socio WHERE IDSocio = @IDSocio)
+    BEGIN
+        RAISERROR('El socio indicado no existe.', 16, 1);
+        RETURN;
+    END;
+
+    ----------------------------------------------------------------
+    -- Validar fechas
+    ----------------------------------------------------------------
+    IF (@FechaInicio IS NULL OR @FechaFin IS NULL)
+    BEGIN
+        RAISERROR('Las fechas de inicio y fin son obligatorias.', 16, 1);
+        RETURN;
+    END;
+
+    IF (@FechaFin <= @FechaInicio)
+    BEGIN
+        RAISERROR('La fecha de fin debe ser mayor a la fecha de inicio.', 16, 1);
+        RETURN;
+    END;
+
+    ----------------------------------------------------------------
+    -- Validar seleccion Solo se puede uno
+    ----------------------------------------------------------------
+    DECLARE @CantidadRecursos INT =
+        (CASE WHEN @IDCancha  IS NULL THEN 0 ELSE 1 END) +
+        (CASE WHEN @IDQuincho IS NULL THEN 0 ELSE 1 END) +
+        (CASE WHEN @IDPileta  IS NULL THEN 0 ELSE 1 END);
+
+    IF (@CantidadRecursos = 0)
+    BEGIN
+        RAISERROR('Debe seleccionar al menos un recurso: cancha, quincho o pileta.', 16, 1);
+        RETURN;
+    END;
+
+    IF (@CantidadRecursos > 1)
+    BEGIN
+        RAISERROR('La reserva solo puede asociarse a un recurso (cancha, quincho o pileta).', 16, 1);
+        RETURN;
+    END;
+
+    ----------------------------------------------------------------
+    -- Validar existencia
+    ----------------------------------------------------------------
+
+    -- Cancha
+    IF (@IDCancha IS NOT NULL)
+    BEGIN
+        IF NOT EXISTS (SELECT 1 FROM Cancha WHERE IDCancha = @IDCancha AND Activo = 1)
+        BEGIN
+            RAISERROR('La cancha indicada no existe o no estÃ¡ activa.', 16, 1);
+            RETURN;
+        END;
+
+       
+        IF (@IDTipoCancha IS NOT NULL)
+        BEGIN
+            IF NOT EXISTS (
+                SELECT 1
+                FROM CanchaPuente
+                WHERE IDCancha = @IDCancha
+                  AND IDTipoCancha = @IDTipoCancha
+                  AND Habilitada = 1
+            )
+            BEGIN
+                RAISERROR('La combinaciÃ³n de cancha y tipo de cancha no estÃ¡ habilitada.', 16, 1);
+                RETURN;
+            END;
+        END;
+    END
+    ELSE
+    BEGIN
+        SET @IDTipoCancha = NULL;
+    END;
+
+    -- Quincho
+    IF (@IDQuincho IS NOT NULL)
+    BEGIN
+        IF NOT EXISTS (SELECT 1 FROM Quincho WHERE IDQuincho = @IDQuincho AND Activo = 1)
+        BEGIN
+            RAISERROR('El quincho indicado no existe o no estÃ¡ activo.', 16, 1);
+            RETURN;
+        END;
+    END;
+
+    -- Pileta
+    IF (@IDPileta IS NOT NULL)
+    BEGIN
+        IF NOT EXISTS (SELECT 1 FROM Pileta WHERE IDPileta = @IDPileta AND Activo = 1)
+        BEGIN
+            RAISERROR('La pileta indicada no existe o no estÃ¡ activa.', 16, 1);
+            RETURN;
+        END;
+    END;
+
+    -- Cancha
+    IF (@IDCancha IS NOT NULL)
+    BEGIN
+        IF EXISTS (
+            SELECT 1
+            FROM Reserva
+            WHERE IDCancha = @IDCancha
+              AND Estado = 'Activa'
+              AND FechaInicio < @FechaFin
+              AND FechaFin > @FechaInicio
+        )
+        BEGIN
+            RAISERROR('La cancha seleccionada ya tiene una reserva activa en el horario indicado.', 16, 1);
+            RETURN;
+        END;
+    END;
+
+    -- Quincho
+    IF (@IDQuincho IS NOT NULL)
+    BEGIN
+        IF EXISTS (
+            SELECT 1
+            FROM Reserva
+            WHERE IDQuincho = @IDQuincho
+              AND Estado = 'Activa'
+              AND FechaInicio < @FechaFin
+              AND FechaFin > @FechaInicio
+        )
+        BEGIN
+            RAISERROR('El quincho seleccionado ya tiene una reserva activa en el horario indicado.', 16, 1);
+            RETURN;
+        END;
+    END;
+
+    -- Pileta
+    IF (@IDPileta IS NOT NULL)
+    BEGIN
+        IF EXISTS (
+            SELECT 1
+            FROM Reserva
+            WHERE IDPileta = @IDPileta
+              AND Estado = 'Activa'
+              AND FechaInicio < @FechaFin
+              AND FechaFin > @FechaInicio
+        )
+        BEGIN
+            RAISERROR('La pileta seleccionada ya tiene una reserva activa en el horario indicado.', 16, 1);
+            RETURN;
+        END;
+    END;
+
+    ----------------------------------------------------------------
+    -- Insertar reserva (Estado usa default 'Activa')
+    ----------------------------------------------------------------
+    INSERT INTO Reserva
+    (
+        IDSocio,
+        IDCancha,
+        IDTipoCancha,
+        IDQuincho,
+        IDPileta,
+        FechaInicio,
+        FechaFin,
+        PrecioTotal,
+        Observ
+    )
+    VALUES
+    (
+        @IDSocio,
+        @IDCancha,
+        @IDTipoCancha,
+        @IDQuincho,
+        @IDPileta,
+        @FechaInicio,
+        @FechaFin,
+        @PrecioTotal,
+        @Observ
+    );
+
+    SELECT SCOPE_IDENTITY() AS IDReservaCreada;
+END;
+GO
+
+--FIN sp_CrearReserva
