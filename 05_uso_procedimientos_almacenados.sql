@@ -57,3 +57,18 @@ EXEC dbo.sp_RankingRecursosMasRentables
     @FechaDesde  = '2025-01-01',
     @FechaHasta  = '2025-12-31',
     @TipoRecurso = 'QUINCHO';
+
+-- Errores
+USE ClubDeportivo_DB;
+
+EXEC dbo.sp_RankingRecursosMasRentables
+    @FechaDesde  = '2025-01-01',
+    @FechaHasta  = '2025-12-31',
+    @TipoRecurso = NULL; 
+
+
+EXEC dbo.sp_RankingRecursosMasRentables
+    @FechaDesde  = '2025-01-01',
+    @FechaHasta  = '2025-12-31',
+    @TipoRecurso = 'PILETAS';
+
