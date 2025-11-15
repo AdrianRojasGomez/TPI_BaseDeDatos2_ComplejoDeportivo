@@ -1,4 +1,6 @@
 -- Prueba de SP dbo.sp_RegistrarSocio
+USE ClubDeportivo_DB;
+GO
 SELECT * FROM Socio;
 
 EXEC dbo.sp_RegistrarSocio
@@ -37,3 +39,21 @@ EXEC dbo.sp_CrearReserva
     @FechaInicio = '2025-11-03 10:30:00',
     @FechaFin = '2025-11-03 11:30:00',
     @PrecioTotal = 4000.00;
+
+
+---------------------------------------------------------
+--Rankings de mas rentables
+---------------------------------------------------------   
+ 
+USE ClubDeportivo_DB;
+-- Ranking de canchas entre 2025-01-01 y 2025-12-31
+EXEC dbo.sp_RankingRecursosMasRentables
+    @FechaDesde  = '2025-01-01',
+    @FechaHasta  = '2025-12-31',
+    @TipoRecurso = 'CANCHA';
+
+-- Ranking de quinchos en todo 2025
+EXEC dbo.sp_RankingRecursosMasRentables
+    @FechaDesde  = '2025-01-01',
+    @FechaHasta  = '2025-12-31',
+    @TipoRecurso = 'QUINCHO';

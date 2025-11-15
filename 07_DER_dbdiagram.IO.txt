@@ -1,0 +1,94 @@
+Project ClubDeportivo {
+  database_type: 'SQLServer'
+}
+
+Table Socio {
+  IDSocio   int [pk, increment]
+  Nombre    varchar(50) [not null]
+  Apellido  varchar(50) [not null]
+  DNI       char(8) [not null, unique]
+  Direccion varchar(150)
+  Email     varchar(100) [unique]
+  TipoSocio varchar(50) [not null]
+  FechaAlta date [not null, default: `GETDATE()`]
+  FechaBaja date
+}
+
+Table Deporte {
+  IDDeporte int [pk, increment]
+  Nombre    varchar(50) [not null, unique]
+}
+
+Table Cancha {
+  IDCancha     int [pk, increment]
+  NumeroCancha int [not null, unique]
+  Cubierta     bit [not null, default: 0]
+  Activo       bit [not null, default: 1]
+}
+
+Table TipoCancha {
+  IDTipoCancha int [pk, increment]
+  IDDeporte    int [not null]
+  Modelo       varchar(50)
+  Superficie   varchar(50)
+}
+
+Table CanchaPuente {
+  IDCanchaPuente int [pk, increment]
+  IDCancha       int [not null]
+  IDTipoCancha   int [not null]
+  Habilitada     bit [not null, default: 1]
+  PrecioHora     decimal(10,2) [not null]
+
+  Indexes {
+    (IDCancha, IDTipoCancha) [unique, name: 'UQ_Cancha_Tipo']
+  }
+}
+
+Table Quincho {
+  IDQuincho     int [pk, increment]
+  NumeroQuincho int [not null, unique]
+  Activo        bit [not null, default: 1]
+  Sector        varchar(50)
+  EsExclusivo   bit [not null, default: 0]
+}
+
+Table Pileta {
+  IDPileta     int [pk, increment]
+  NumeroPileta int [not null, unique]
+  Activo       bit [not null, default: 1]
+  Sector       varchar(50)
+  EsExclusivo  bit [not null, default: 1]
+}
+
+Table Reserva {
+  IDReserva    int [pk, increment]
+  IDSocio      int [not null]
+  IDCancha     int
+  IDTipoCancha int
+  IDQuincho    int
+  IDPileta     int
+  FechaInicio  datetime [not null]
+  FechaFin     datetime [not null]
+  PrecioTotal  decimal(10,2)
+  Estado       varchar(20) [not null, default: 'Activa']
+  Observ       varchar(200)
+
+  checks {
+    `(IDCancha IS NOT NULL) OR (IDQuincho IS NOT NULL) OR (IDPileta IS NOT NULL)` [name: 'CK_Reserva_Alguno']
+    `FechaFin > FechaInicio` [name: 'CK_Reserva_Rango']
+  }
+}
+
+/* Relaciones (foreign keys) */
+
+Ref: TipoCancha.IDDeporte > Deporte.IDDeporte
+
+Ref: CanchaPuente.IDCancha > Cancha.IDCancha
+Ref: CanchaPuente.IDTipoCancha > TipoCancha.IDTipoCancha
+
+Ref: Reserva.IDSocio      > Socio.IDSocio
+Ref: Reserva.IDCancha     > Cancha.IDCancha
+Ref: Reserva.IDTipoCancha > TipoCancha.IDTipoCancha
+Ref: Reserva.IDQuincho    > Quincho.IDQuincho
+Ref: Reserva.IDPileta     > Pileta.IDPileta

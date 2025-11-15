@@ -1,6 +1,6 @@
 --sp_RegistrarSocio
---Objetivo: A�adir un nuevo socio al club, asegurando que los datos b�sicos est�n presentes.
---L�gica: Recibe los datos del socio, los valida (en este caso, solo inserta) y lo registra con la fecha actual.
+--Objetivo: Anadir un nuevo socio al club, asegurando que los datos b�sicos est�n presentes.
+--Logica: Recibe los datos del socio, los valida (en este caso, solo inserta) y lo registra con la fecha actual.
 
 USE ClubDeportivo_DB;
 GO
@@ -34,7 +34,7 @@ BEGIN
     IF (@Email IS NOT NULL)
         SET @Email = TRIM(@Email);
 
-    -- Validaciones b�sicas
+    -- Validaciones
     IF (@Nombre = '' OR @Nombre IS NULL)
     BEGIN
         RAISERROR('El nombre es obligatorio.', 16, 1);
@@ -65,14 +65,14 @@ BEGIN
         RETURN;
     END;
 
-    -- DNI �nico
+    -- DNI 
     IF EXISTS (SELECT 1 FROM Socio WHERE DNI = @DNI)
     BEGIN
         RAISERROR('Ya existe un socio registrado con ese DNI.', 16, 1);
         RETURN;
     END;
 
-    -- Email �nico si viene
+    -- Email  si viene
     IF (@Email IS NOT NULL AND @Email <> '')
        AND EXISTS (SELECT 1 FROM Socio WHERE Email = @Email)
     BEGIN
@@ -94,7 +94,8 @@ GO
 -----------------------------------------------------------------
 --sp_CrearReserva
 --Objetivo: Crear una nueva reserva, validando que no haya conflictos de horario con el mismo recurso.
---Logica: Esta revisa si ya existe una reserva activa para el mismo recurso (cancha, quincho o pileta) que se superponga con el horario solicitado. Si esta libre, la inserta.
+--Logica: Esta revisa si ya existe una reserva activa para el mismo recurso (cancha, quincho o pileta)
+-- que se superponga con el horario solicitado. Si esta libre, la inserta.
 -----------------------------------------------------------------
 
 USE ClubDeportivo_DB;
@@ -305,3 +306,97 @@ END;
 GO
 
 --FIN sp_CrearReserva
+
+-----------------------------------------------------------------
+-- sp_RankingRecursosMasRentables
+-- Objetivo: Obtener el ranking de reservas más rentables de un tipo de recurso 
+-- (cancha / quincho / pileta) en un período.
+-- Lógica: Filtra reservas por fecha, agrupa por recurso, cuenta reservas y suma el PrecioTotal, 
+-- ordenando de mayor a menor.
+-----------------------------------------------------------------
+
+USE ClubDeportivo_DB;
+GO
+
+IF OBJECT_ID('dbo.sp_RankingRecursosMasRentables', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_RankingRecursosMasRentables;
+GO
+
+CREATE PROCEDURE dbo.sp_RankingRecursosMasRentables
+    @FechaDesde  date,          -- desde esta fecha (incluida)
+    @FechaHasta  date,          -- hasta esta fecha (incluida)
+    @TipoRecurso varchar(10)    -- 'CANCHA' / 'QUINCHO' / 'PILETA'
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Normalizo el parámetro a mayúsculas
+    SET @TipoRecurso = UPPER(@TipoRecurso);
+
+    -----------------------------------------------------------------
+    -- CANCHAS
+    -----------------------------------------------------------------
+    IF @TipoRecurso = 'CANCHA'
+    BEGIN
+        SELECT 
+            'CANCHA' AS TipoRecurso,
+            c.IDCancha AS IdRecurso,
+            'Cancha ' + CAST(c.NumeroCancha AS varchar(10)) AS NombreRecurso,
+            COUNT(*) AS CantReservas,
+            SUM(ISNULL(r.PrecioTotal, 0)) AS ImporteTotal
+        FROM dbo.Reserva r
+        INNER JOIN dbo.Cancha c ON r.IDCancha = c.IDCancha
+        WHERE r.FechaInicio >= @FechaDesde
+          AND r.FechaInicio < DATEADD(DAY, 1, @FechaHasta)
+        GROUP BY c.IDCancha, c.NumeroCancha
+        ORDER BY ImporteTotal DESC;
+        RETURN;
+    END;
+
+    -----------------------------------------------------------------
+    -- QUINCHOS
+    -----------------------------------------------------------------
+    IF @TipoRecurso = 'QUINCHO'
+    BEGIN
+        SELECT 
+            'QUINCHO' AS TipoRecurso,
+            q.IDQuincho AS IdRecurso,
+            'Quincho ' + CAST(q.NumeroQuincho AS varchar(10)) AS NombreRecurso,
+            COUNT(*) AS CantReservas,
+            SUM(ISNULL(r.PrecioTotal, 0)) AS ImporteTotal
+        FROM dbo.Reserva r
+        INNER JOIN dbo.Quincho q ON r.IDQuincho = q.IDQuincho
+        WHERE r.FechaInicio >= @FechaDesde
+          AND r.FechaInicio < DATEADD(DAY, 1, @FechaHasta)
+        GROUP BY q.IDQuincho, q.NumeroQuincho
+        ORDER BY ImporteTotal DESC;
+        RETURN;
+    END;
+
+    -----------------------------------------------------------------
+    -- PILETAS
+    -----------------------------------------------------------------
+    IF @TipoRecurso = 'PILETA'
+    BEGIN
+        SELECT 
+            'PILETA' AS TipoRecurso,
+            p.IDPileta AS IdRecurso,
+            'Pileta ' + CAST(p.NumeroPileta AS varchar(10)) AS NombreRecurso,
+            COUNT(*) AS CantReservas,
+            SUM(ISNULL(r.PrecioTotal, 0)) AS ImporteTotal
+        FROM dbo.Reserva r
+        INNER JOIN dbo.Pileta p ON r.IDPileta = p.IDPileta
+        WHERE r.FechaInicio >= @FechaDesde
+          AND r.FechaInicio < DATEADD(DAY, 1, @FechaHasta)
+        GROUP BY p.IDPileta, p.NumeroPileta
+        ORDER BY ImporteTotal DESC;
+        RETURN;
+    END;
+
+    -- Si llega acá, el tipo de recurso no es válido
+    RAISERROR ('TipoRecurso inválido. Use CANCHA, QUINCHO o PILETA.', 16, 1);
+END;
+GO
+
+
+-- FIN SP_RankingRecursosMasRentables
