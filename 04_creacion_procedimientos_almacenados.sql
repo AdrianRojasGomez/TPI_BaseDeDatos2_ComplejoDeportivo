@@ -22,6 +22,7 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
+    BEGIN TRY
     -- Normalizo espacios (TRIM quita al inicio y al final)
     SET @Nombre    = TRIM(@Nombre);
     SET @Apellido  = TRIM(@Apellido);
@@ -86,6 +87,11 @@ BEGIN
 
     -- Devuelvo el ID generado
     SELECT SCOPE_IDENTITY() AS IDSocioCreado;
+    END TRY
+    BEGIN CATCH
+
+       THROW;
+    END CATCH
 END;
 GO
 
@@ -120,7 +126,7 @@ CREATE PROCEDURE dbo.sp_CrearReserva
 AS
 BEGIN
     SET NOCOUNT ON;
-
+    BEGIN TRY
     IF (@Observ IS NOT NULL)
         SET @Observ = TRIM(@Observ);
 
@@ -302,6 +308,11 @@ BEGIN
     );
 
     SELECT SCOPE_IDENTITY() AS IDReservaCreada;
+
+    END TRY
+    BEGIN CATCH
+        THROW;
+    END CATCH;
 END;
 GO
 
@@ -329,6 +340,8 @@ CREATE PROCEDURE dbo.sp_RankingRecursosMasRentables
 AS
 BEGIN
     SET NOCOUNT ON;
+
+    BEGIN TRY
 
     -- Normalizo el parámetro a mayúsculas
     SET @TipoRecurso = UPPER(@TipoRecurso);
@@ -393,8 +406,13 @@ BEGIN
         RETURN;
     END;
 
-    -- Si llega acá, el tipo de recurso no es válido
-    RAISERROR ('TipoRecurso inválido. Use CANCHA, QUINCHO o PILETA.', 16, 1);
+    SELECT 'TipoRecurso inválido. Use CANCHA, QUINCHO o PILETA.' AS MensajeError;
+    RETURN;
+    END TRY
+
+    BEGIN CATCH
+    THROW;
+    END CATCH
 END;
 GO
 
