@@ -14,6 +14,10 @@ GO
 ---------------------------------------------------------
 --Prueba exitosa de SP dbo.sp_CrearReserva 
 ---------------------------------------------------------
+USE ClubDeportivo_DB;
+GO
+
+SELECT * FROM Reserva
 
 EXEC dbo.sp_CrearReserva
     @IDSocio = 4,
@@ -26,11 +30,9 @@ EXEC dbo.sp_CrearReserva
     @PrecioTotal = 4000.00,
     @Observ = 'Reserva de cancha Fútbol 5 para Sofía';
 
---Prueba de error conflicto de horariode SP dbo.sp_CrearReserva 
-
 ---------------------------------------------------------
---Intentar reservar la Cancha 1 el 3 de noviembre de 10:30 a 11:30. Esto entra en conflicto con la reserva existente de Lucas (Reserva ID 1) que es de 10:00 a 11:00.
----------------------------------------------------------   
+--Prueba de error conflicto de horariode SP dbo.sp_CrearReserva 
+---------------------------------------------------------
 
 EXEC dbo.sp_CrearReserva
     @IDSocio = 2, 
@@ -72,3 +74,18 @@ EXEC dbo.sp_RankingRecursosMasRentables
     @FechaHasta  = '2025-12-31',
     @TipoRecurso = 'PILETAS';
 
+
+---------------------------------------------------------
+--Cancelacion de Reservas
+--------------------------------------------------------- 
+--  cancelar la Reserva 1,
+
+SELECT *FROM Reserva
+
+EXEC dbo.sp_CancelarReserva @IDReserva = 1;
+
+
+-- Forzamos la cancelacion de la Reserva 2
+EXEC dbo.sp_CancelarReserva 
+    @IDReserva = 2,
+    @ForzarCancelacion = 1;
