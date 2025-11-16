@@ -1,4 +1,6 @@
-﻿select *from Socio
+﻿USE ClubDeportivo_DB
+
+select *from Socio
 select *from Reserva
 select *from Cancha
 select *from TipoCancha
@@ -142,3 +144,5 @@ GROUP BY
     MONTH(r.FechaInicio);
 
 	select *from VW_RecaudacionMensual
+
+

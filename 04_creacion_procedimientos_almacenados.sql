@@ -418,3 +418,87 @@ GO
 
 
 -- FIN SP_RankingRecursosMasRentables
+
+-----------------------------------------------------------------
+--sp_CancelarReserva
+--Objetivo: Cancelar una reserva existente.
+--Logica: Actualiza el estado de la reserva a 'Cancelada'.
+-----------------------------------------------------------------
+USE ClubDeportivo_DB;
+GO
+
+IF OBJECT_ID('dbo.sp_CancelarReserva', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_CancelarReserva;
+GO
+
+CREATE PROCEDURE dbo.sp_CancelarReserva
+(
+    @IDReserva INT,
+    @ForzarCancelacion BIT = 0   
+)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE 
+        @EstadoActual  VARCHAR(20),
+        @FechaInicio   DATETIME;
+
+  
+    SELECT 
+        @EstadoActual = Estado,
+        @FechaInicio  = FechaInicio
+    FROM Reserva
+    WHERE IDReserva = @IDReserva;
+
+    IF (@EstadoActual IS NULL)
+    BEGIN
+        RAISERROR('La reserva indicada no existe.', 16, 1);
+        RETURN;
+    END;
+
+    IF (@EstadoActual = 'Cancelada')
+    BEGIN
+        RAISERROR('La reserva ya se encuentra cancelada.', 16, 1);
+        RETURN;
+    END;
+
+    IF (@EstadoActual <> 'Activa')
+    BEGIN
+        RAISERROR('Solo se pueden cancelar reservas con estado "Activa".', 16, 1);
+        RETURN;
+    END;
+
+ 
+    IF (@ForzarCancelacion = 0)
+    BEGIN
+        
+        IF (@FechaInicio <= GETDATE())
+        BEGIN
+            RAISERROR('No se puede cancelar una reserva que ya ha comenzado o finalizado.', 16, 1);
+            RETURN;
+        END;
+
+        
+        IF (DATEDIFF(HOUR, GETDATE(), @FechaInicio) < 24)
+        BEGIN
+            RAISERROR('No se puede cancelar la reserva con menos de 24 horas de anticipacion.', 16, 1);
+            RETURN;
+        END;
+    END;
+
+    
+    UPDATE Reserva
+    SET Estado = 'Cancelada'
+    WHERE IDReserva = @IDReserva;
+
+    
+    SELECT 
+        IDReserva,
+        Estado
+    FROM Reserva
+    WHERE IDReserva = @IDReserva;
+END;
+GO
+
+SELECT * FROM Reserva
