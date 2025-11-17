@@ -1,16 +1,24 @@
--- Prueba de SP dbo.sp_RegistrarSocio
-USE ClubDeportivo_DB;
-GO
-SELECT * FROM Socio;
-
+---------------------------------------------------------
+-- Prueba Exitosa: Registrar un nuevo socio
+---------------------------------------------------------
 EXEC dbo.sp_RegistrarSocio
-    @Nombre    = 'Mar�a',
-    @Apellido  = 'G�mez',
-    @DNI       = '10000002',
-    @TipoSocio = 'Premium',
-    @Direccion = 'Av. Siempre Viva 742',
-    @Email     = 'maria.gomez@example.com';
-GO
+    @Nombre = 'Julian',
+    @Apellido = 'Alvarez',
+    @DNI = '99887766',      
+    @TipoSocio = 'Pleno',
+    @Direccion = 'Calle Falsa 123',
+    @Email = 'julian.arana@mail.com';
+
+---------------------------------------------------------
+-- Prueba Fallida: Intentar registrar un DNI duplicado
+---------------------------------------------------------
+EXEC dbo.sp_RegistrarSocio
+    @Nombre = 'Lionel',
+    @Apellido = 'Messi',
+    @DNI = '99887766',      
+    @TipoSocio = 'Vitalicio',
+    @Email = 'lio@mail.com';
+
 ---------------------------------------------------------
 --Prueba exitosa de SP dbo.sp_CrearReserva 
 ---------------------------------------------------------
@@ -46,14 +54,14 @@ EXEC dbo.sp_CrearReserva
 ---------------------------------------------------------
 --Rankings de mas rentables
 ---------------------------------------------------------   
- 
+ SELECT * FROM Reserva
 USE ClubDeportivo_DB;
 -- Ranking de canchas entre 2025-01-01 y 2025-12-31
 EXEC dbo.sp_RankingRecursosMasRentables
     @FechaDesde  = '2025-01-01',
     @FechaHasta  = '2025-12-31',
     @TipoRecurso = 'CANCHA';
-
+ SELECT * FROM Reserva
 -- Ranking de quinchos en todo 2025
 EXEC dbo.sp_RankingRecursosMasRentables
     @FechaDesde  = '2025-01-01',
@@ -89,3 +97,4 @@ EXEC dbo.sp_CancelarReserva @IDReserva = 1;
 EXEC dbo.sp_CancelarReserva 
     @IDReserva = 2,
     @ForzarCancelacion = 1;
+
