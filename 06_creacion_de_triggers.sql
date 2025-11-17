@@ -33,31 +33,24 @@ BEGIN
 END;
 GO
 
---trg_EvitarBorradoSocioConReservas
---Objetivo: Impedir que se elimine (DELETE) un socio si este tiene reservas históricas. La regla de negocio debería ser darlo de baja (UPDATE FechaBaja), no borrarlo.
+--trg_trg_Socio_BajaLogica
+--Objetivo: Impedir que se elimine fisicamente (DELETE) un socio si este tiene reservas históricas. La regla de negocio debería ser darlo de baja (UPDATE FechaBaja), no borrarlo.
 --Evento: INSTEAD OF DELETE en la tabla Socio.
 --Lógica: Este trigger "reemplaza" la acción de DELETE. En lugar de borrar al socio, verifica si tiene reservas. Si tiene, lo impide. Si no tiene, se podría permitir el borrado, aunque lo más seguro es forzar siempre la baja lógica.
 
 USE ClubDeportivo_DB;
 GO
 
-IF OBJECT_ID('dbo.trg_EvitarBorradoSocioConReservas', 'TR') IS NOT NULL
-    DROP TRIGGER dbo.trg_EvitarBorradoSocioConReservas;
+IF OBJECT_ID('dbo.trg_Socio_BajaLogica', 'TR') IS NOT NULL
+    DROP TRIGGER dbo.trg_Socio_BajaLogica;
 GO
 
-CREATE TRIGGER dbo.trg_EvitarBorradoSocioConReservas
+CREATE TRIGGER dbo.trg_Socio_BajaLogica
 ON dbo.Socio
 INSTEAD OF DELETE
 AS
 BEGIN
     SET NOCOUNT ON;
-
-    /*
-        Regla aplicada:
-        - No se permite borrar físicamente socios.
-        - Cualquier intento de DELETE se transforma en baja lógica (FechaBaja).
-        - Si ya tenían FechaBaja, se deja como está.
-    */
 
     -- Marca FechaBaja sólo donde aún no esté seteada
     UPDATE S
@@ -71,6 +64,11 @@ BEGIN
 END;
 GO
 
+
+--trg_PrevenirModificacionReservaPasada
+--Objetivo: Prohibir que se modifiquen las reservas finalizadas.
+--Evento: After update.
+--Lógica: 
 USE ClubDeportivo_DB;
 GO
 
@@ -84,14 +82,6 @@ AFTER UPDATE
 AS
 BEGIN
     SET NOCOUNT ON;
-
-    /*
-        Regla:
-        - Si una reserva ya estaba finalizada (FechaFin anterior < GETDATE()),
-          no se permite modificarla.
-        - Si el UPDATE afecta varias filas y al menos una es histórica,
-          se revierte TODO el UPDATE.
-    */
 
     IF EXISTS (
         SELECT 1
